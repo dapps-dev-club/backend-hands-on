@@ -1,5 +1,6 @@
 import Web3 from 'web3';
 
+import crypt from './crypt.js';
 import ipfs from './ipfs.js';
 
 import profilesArtefact from "../../build/contracts/Profiles.json";
@@ -8,6 +9,7 @@ const ProfilesApp = {
   web3: undefined,
   accounts: undefined,
   contract: undefined,
+  crypt,
 };
 
 window.addEventListener('load', function() {

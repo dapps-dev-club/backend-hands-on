@@ -14,7 +14,11 @@
     "webpack-dev-server": "^3.7.1"
   },
   "dependencies": {
+    "ecies-parity": "^0.1.0",
+    "elliptic": "^6.4.1",
+    "eth-sig-util": "^2.2.0",
     "ipfs-api": "^26.1.2",
+    "tweetnacl": "^1.0.1",
     "web3": "1.0.0-beta.37",
     "web3-utils": "1.0.0-beta.37"
   }
