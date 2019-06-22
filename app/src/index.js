@@ -1,5 +1,7 @@
 import Web3 from 'web3';
 
+import ipfs from './ipfs.js';
+
 import profilesArtefact from "../../build/contracts/Profiles.json";
 
 const ProfilesApp = {
@@ -79,10 +81,15 @@ async function queryProfile() {
   });
   console.log({ ipfsHash });
 
-  // TODO use the IPFS hash to read file
+  // use the IPFS hash to read file
   // https://github.com/ipfs/interface-js-ipfs-core/blob/master/SPEC/FILES.md#cat
+  const ipfsFileBuffer = await ipfs.cat(`/ipfs/${ipfsHash}`);
+  const profile = ipfsFileBuffer.toString();
 
-  // TODO display profile
+  // display profile
+  console.log({ profile });
+  const profileOutput = document.querySelector('#profileOutput');
+  profileOutput.value = profile;
 }
 
 async function updateProfile() {
@@ -95,12 +102,16 @@ async function updateProfile() {
   }
   console.log({ profile });
 
-  // TODO write to IPFS and obtain its hash
+  // write to IPFS and obtain its hash
   // ref: https://github.com/ipfs/interface-js-ipfs-core/blob/master/SPEC/FILES.md#add
+  const buffer = await Buffer.from(JSON.stringify(profile, undefined, 2));
+  const ipfsResult = await ipfs.add(buffer);
+  console.log({ ipfsResult });
 
-  // TODO write IPFS hash instead of the full JSON file
   await ProfilesApp.contract.methods.updateProfile(
-    JSON.stringify(profile),
+    // Write the IPFS hash instead of the full JSON
+    // JSON.stringify(profile),
+    ipfsResult[0].hash,
   ).send({
     from: ProfilesApp.accounts[0],
   });
