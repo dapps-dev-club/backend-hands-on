@@ -64,6 +64,12 @@ async function init() {
   const updateProfileButton = document.querySelector('#updateProfileButton');
   updateProfileButton.addEventListener('click', updateProfile);
 
+  const generateEncryptionKeysButton = document.querySelector('#generateEncryptionKeysButton');
+  generateEncryptionKeysButton.addEventListener('click', generateEncryptionKeys);
+
+  const addEncryptedFieldButton = document.querySelector('#addEncryptedFieldButton');
+  addEncryptedFieldButton.addEventListener('click', addEncryptedField);
+
   // trigger various things that need to happen upon app being opened.
   window.ethereum.on('accountsChanged', updateAccounts);
 }
@@ -71,6 +77,14 @@ async function init() {
 async function updateAccounts(accounts) {
   ProfilesApp.accounts = accounts;
   console.log('updateAccounts', accounts[0]);
+
+  const addressInput = document.querySelector('#addressInput');
+  addressInput.value = accounts[0];
+  await queryProfile();
+
+  const profileOutput = document.querySelector('#profileOutput');
+  const profileInput = document.querySelector('#profileInput');
+  profileInput.value = profileOutput.value;
 }
 
 async function queryProfile() {
@@ -88,10 +102,91 @@ async function queryProfile() {
   const ipfsFileBuffer = await ipfs.cat(`/ipfs/${ipfsHash}`);
   const profile = ipfsFileBuffer.toString();
 
-  // display profile
+  // display profile as-is
   console.log({ profile });
   const profileOutput = document.querySelector('#profileOutput');
   profileOutput.value = profile;
+
+  // attempt to decrypt fields within profile that are decryptable, then re-display
+  try {
+    await decryptProfile();
+  } catch (ex) {
+    console.error(ex);
+    console.log('Skipped profile decryption due to failed attempt');
+  }
+}
+
+async function decryptProfile() {
+  const profileInput = document.querySelector('#profileInput');
+  let profile;
+  try {
+    profile = JSON.parse(profileInput.value);
+  } catch (ex) {
+    throw 'Failed to parse input profile';
+  }
+  
+  const {
+    publicKey,
+    privateKey,
+  } = profile;
+
+  if (!publicKey || !privateKey) {
+    throw new Error('Missing own encryption keys');
+  }
+
+  const profileOutput = document.querySelector('#profileOutput');
+  let encryptedProfile;
+  try {
+    encryptedProfile = JSON.parse(profileOutput.value);
+  } catch (ex) {
+    throw 'Failed to parse output profile';
+  }
+
+  const decryptedProfile = {};
+  for (const [key, value] of Object.entries(encryptedProfile)) {
+    console.log({ key, value });
+    if (
+      typeof value === 'object' &&
+      value.visibleTo === publicKey
+    ) {
+      try {
+        const decryptedValue = await ProfilesApp.crypt.decrypt(
+          privateKey,
+          value,
+        );
+        decryptedProfile[key] = decryptedValue;
+      } catch (ex) {
+        decryptedProfile[key] = value;
+      }
+    } else {
+      decryptedProfile[key] = value;
+    }
+  }
+
+  const updatedProfileString = JSON.stringify(decryptedProfile, undefined, 2);
+  profileOutput.value = updatedProfileString;
+}
+
+async function generateEncryptionKeys() {
+  const profileInput = document.querySelector('#profileInput');
+  let profile;
+  try {
+    profile = JSON.parse(profileInput.value);
+  } catch (ex) {
+    throw 'Failed to parse input profile';
+  }
+
+  const keys = await ProfilesApp.crypt.generateKeyPair();
+
+  const updatedProfile = {
+    ...profile,
+    ...keys,
+  };
+
+  const updatedProfileString = JSON.stringify(updatedProfile, undefined, 2);
+  profileInput.value = updatedProfileString;
+
+  console.log('Profile updated, NOTE that private key is only there for demo purposes');
 }
 
 async function updateProfile() {
@@ -103,6 +198,9 @@ async function updateProfile() {
     throw 'Failed to parse input profile';
   }
   console.log({ profile });
+
+  // NOTE that we should strip the private key - we don't want that to be written anywhere
+  // For demo purposes, we're leaving that in
 
   // write to IPFS and obtain its hash
   // ref: https://github.com/ipfs/interface-js-ipfs-core/blob/master/SPEC/FILES.md#add
@@ -117,4 +215,37 @@ async function updateProfile() {
   ).send({
     from: ProfilesApp.accounts[0],
   });
+}
+
+async function addEncryptedField() {
+  const profileInput = document.querySelector('#profileInput');
+  let profile;
+  try {
+    profile = JSON.parse(profileInput.value);
+  } catch (ex) {
+    throw 'Failed to parse input profile';
+  }
+
+  const cryptToInput = document.querySelector('#cryptToInput');
+  const cryptTextInput = document.querySelector('#cryptTextInput');
+  const cryptProfileKeyInput = document.querySelector('#cryptProfileKeyInput');
+  const cryptTo =  cryptToInput.value;
+  const cryptText =  cryptTextInput.value;
+  const cryptProfileKey = cryptProfileKeyInput.value;
+
+  const encrypted = await ProfilesApp.crypt.encrypt(
+    cryptTo,
+    cryptText,
+  );
+  const messageOutput = {
+    visibleTo: cryptTo,
+    ...encrypted,
+  };
+  const updatedProfile = {
+    ...profile,
+    [cryptProfileKey]: messageOutput,
+  };
+
+  const updatedProfileString = JSON.stringify(updatedProfile, undefined, 2);
+  profileInput.value = updatedProfileString;
 }

@@ -15,15 +15,37 @@
       <br />
       <button id="queryProfileButton">Query Profile</button>
       <br />
-      <textarea rows="10" cols="20" id="profileOutput" readonly="true">
+      <textarea rows="10" cols="50" id="profileOutput" readonly="true">
       </textarea>
     </p>
 
     <h2>Update Profile</h2>
     <p>
-      <textarea rows="10" cols="20" id="profileInput"></textarea>
+      <textarea rows="10" cols="50" id="profileInput"></textarea>
       <br />
+      
+      <button id="generateEncryptionKeysButton">Generate Encryption Keys</button>
+      <br />
+      
       <button id="updateProfileButton">Update Profile</button>
+      <br />
+    </p>
+
+    <h2>Crypt</h2>
+    <p>
+      <label for="cryptProfileKeyInput">Key (in profile)</label>
+      <input type="text" id="cryptProfileKeyInput" />
+      <br />
+
+      <label for="cryptToInput">To (publicKey)</label>
+      <input type="text" id="cryptToInput" />
+      <br />
+
+      <label for="cryptTextInput">Text</label>
+      <input type="text" id="cryptTextInput" />
+      <br />
+      
+      <button id="addEncryptedFieldButton">Add Encrypted Field</button>
       <br />
     </p>
 
